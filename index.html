@@ -1,0 +1,846 @@
+<html><head><base href="https://">
+<style>
+:root {
+  --primary: #2b87d1;
+  --secondary: #34495e;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  margin: 0;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+.game-container {
+  background: white;
+  border-radius: 15px;
+  padding: 2rem;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+  margin: 2rem;
+  max-width: 600px;
+  width: 90%;
+}
+
+.word-display {
+  font-size: 2rem;
+  color: var(--primary);
+  text-align: center;
+  margin: 1rem 0;
+  min-height: 3rem;
+}
+
+.question {
+  font-size: 1.2rem;
+  color: var(--secondary);
+  text-align: center;
+  margin: 1rem 0;
+  min-height: 4rem;
+}
+
+.answer-input {
+  display: block;
+  width: 100%;
+  padding: 1rem;
+  font-size: 1.1rem;
+  border: 2px solid var(--primary);
+  border-radius: 8px;
+  margin: 1rem 0;
+  text-align: center;
+}
+
+.button-container {
+  display: flex;
+  gap: 1rem;
+  width: 100%;
+}
+
+button {
+  width: 100%;
+  padding: 1rem;
+  font-size: 1.1rem;
+  border: none;
+  border-radius: 8px;
+  background: var(--primary);
+  color: white;
+  cursor: pointer;
+  transition: transform 0.2s, background 0.2s;
+}
+
+button:hover {
+  transform: translateY(-2px);
+  background: #1a6cb3;
+}
+
+button.skip {
+  background: var(--secondary);
+}
+
+button.skip:hover {
+  background: #2c3e50;
+}
+
+.new-challenge {
+  margin-top: 1rem;
+  background: #27ae60 !important; /* Green color to differentiate it */
+}
+
+.new-challenge:hover {
+  background: #219a52 !important;
+}
+
+.score {
+  font-size: 1.2rem;
+  color: var(--secondary);
+  text-align: center;
+}
+
+.feedback {
+  text-align: center;
+  min-height: 2rem;
+  margin-top: 1rem;
+  font-weight: bold;
+}
+
+.correct { color: #27ae60; }
+.incorrect { color: #e74c3c; }
+
+.celebration-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.8);
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.celebration-content {
+  background: white;
+  padding: 2rem;
+  border-radius: 15px;
+  text-align: center;
+}
+
+.celebration-content img {
+  max-width: 200px;
+  margin: 1rem 0;
+}
+</style>
+</head>
+<body>
+<div class="game-container">
+  <h1>Word Family Challenge</h1>
+  <h2>(inter-, mega-, mid-, mis-, out-, pro-, re-)</h2>
+  <p class="subtitle">Complete this challenge successfully and earn a Pokemon!</p>
+  <div class="score">Score: <span id="score">0</span></div>
+  <div class="word-display" id="word"></div>
+  <div class="question" id="question"></div>
+  <input type="text" class="answer-input" id="answer" placeholder="Type your answer here">
+  <div class="button-container">
+    <button onclick="checkAnswer()">Submit Answer</button>
+    <button onclick="skipWord()" class="skip">Skip this word</button>
+  </div>
+  <button onclick="startNewChallenge()" class="new-challenge">Start a New Challenge</button>
+  <div class="feedback" id="feedback"></div>
+</div>
+
+<div class="celebration-modal" id="celebrationModal">
+  <div class="celebration-content">
+    <h2>Congratulations!</h2>
+    <p>You've correctly answered 10 questions! You've won this Pokemon!</p>
+    <div id="pokemonImage"></div>
+    <button onclick="closeCelebration()">Continue Playing</button>
+  </div>
+</div>
+
+<script>
+const wordFamilies = [
+  {
+    "baseWord": "national",
+    "question": "What adjective is formed by adding a prefix to the word 'national' to mean involving more than one country?",
+    "correct": ["international"]
+  },
+  {
+    "baseWord": "act",
+    "question": "What verb is formed by adding a prefix to the word 'act' to mean to take action together with others?",
+    "correct": ["interact"]
+  },
+  {
+    "baseWord": "connect",
+    "question": "What verb is formed by adding a prefix to the word 'connect' to mean to connect across or between different things?",
+    "correct": ["interconnect"]
+  },
+  {
+    "baseWord": "view",
+    "question": "What verb is formed by adding a prefix to the word 'view' to mean to look at or observe from different perspectives?",
+    "correct": ["interview"]
+  },
+  {
+    "baseWord": "mediate",
+    "question": "What verb is formed by adding a prefix to the word 'mediate' to mean to resolve conflicts between parties?",
+    "correct": ["intermediate"]
+  },
+  {
+    "baseWord": "fere",
+    "question": "What verb is formed by adding a prefix to the word 'fere' to mean to carry out an action between two or more parties?",
+    "correct": ["interfere"]
+  },
+  {
+    "baseWord": "pose",
+    "question": "What verb is formed by adding a prefix to the word 'pose' to mean to present a challenge or question between different ideas?",
+    "correct": ["interpose"]
+  },
+  {
+    "baseWord": "rupt",
+    "question": "What verb is formed by adding a prefix to the word 'rupt' to mean to break into or disrupt the flow of something?",
+    "correct": ["interrupt"]
+  },
+  {
+    "baseWord": "relate",
+    "question": "What verb is formed by adding a prefix to the word 'relate' to mean to establish a connection between things?",
+    "correct": ["interrelate"]
+  },
+  {
+    "baseWord": "disciplinary",
+    "question": "What adjective is formed by adding a prefix to the word 'disciplinary' to mean relating to more than one discipline?",
+    "correct": ["interdisciplinary"]
+  },
+  {
+    "baseWord": "com",
+    "question": "What verb is formed by adding a prefix to the word 'com' to mean to come together or meet in the middle?",
+    "correct": ["intercommune"]
+  },
+  {
+    "baseWord": "action",
+    "question": "What noun is formed by adding a prefix to the word 'action' to mean action that involves multiple parties or occurs between things?",
+    "correct": ["interaction"]
+  },
+  {
+    "baseWord": "connect",
+    "question": "What verb is formed by adding a prefix to the word 'connect' to mean connect or communicate with others over a distance?",
+    "correct": ["interconnect"]
+  },
+  {
+    "baseWord": "change",
+    "question": "What verb is formed by adding a prefix to the word 'change' to mean to change across or in multiple ways?",
+    "correct": ["interchange"]
+  },
+  {
+    "baseWord": "depend",
+    "question": "What verb is formed by adding a prefix to the word 'depend' to mean to rely or depend on each other?",
+    "correct": ["interdepend"]
+  },
+  {
+    "baseWord": "corporate",
+    "question": "What adjective is formed by adding a prefix to the word 'corporate' to mean involving multiple corporations?",
+    "correct": ["intercorporate"]
+  },
+  {
+    "baseWord": "course",
+    "question": "What noun is formed by adding a prefix to the word 'course' to mean a series of lessons or activities between different people?",
+    "correct": ["intercourse"]
+  },
+[
+  {
+    "baseWord": "phone",
+    "question": "What noun is formed by adding a prefix to the word 'phone' to mean a device for large-scale communication?",
+    "correct": ["megaphone"]
+  },
+  {
+    "baseWord": "city",
+    "question": "What noun is formed by adding a prefix to the word 'city' to mean a very large city?",
+    "correct": ["megacity"]
+  },
+  {
+    "baseWord": "structure",
+    "question": "What noun is formed by adding a prefix to the word 'structure' to mean an extremely large or important structure?",
+    "correct": ["megastructure"]
+  },
+  {
+    "baseWord": "store",
+    "question": "What noun is formed by adding a prefix to the word 'store' to mean a very large retail store?",
+    "correct": ["megastore"]
+  },
+  {
+    "baseWord": "byte",
+    "question": "What noun is formed by adding a prefix to the word 'byte' to mean a unit of data in computing, a million bytes?",
+    "correct": ["megabyte"]
+  },
+  {
+    "baseWord": "trend",
+    "question": "What noun is formed by adding a prefix to the word 'trend' to mean a large-scale, popular trend?",
+    "correct": ["megatrend"]
+  },
+  {
+    "baseWord": "project",
+    "question": "What noun is formed by adding a prefix to the word 'project' to mean a very large and ambitious project?",
+    "correct": ["megaproject"]
+  },
+  {
+    "baseWord": "day",
+    "question": "What noun is formed by adding a prefix to the word 'day' to mean the middle of the day?",
+    "correct": ["midday"]
+  },
+  {
+    "baseWord": "life",
+    "question": "What noun is formed by adding a prefix to the word 'life' to mean the middle period of life?",
+    "correct": ["midlife"]
+  },
+  {
+    "baseWord": "point",
+    "question": "What noun is formed by adding a prefix to the word 'point' to mean a point in the middle of something?",
+    "correct": ["midpoint"]
+  },
+  {
+    "baseWord": "term",
+    "question": "What noun is formed by adding a prefix to the word 'term' to mean the middle part of a term?",
+    "correct": ["midterm"]
+  },
+  {
+    "baseWord": "season",
+    "question": "What noun is formed by adding a prefix to the word 'season' to mean the middle of the season?",
+    "correct": ["midseason"]
+  },
+  {
+    "baseWord": "air",
+    "question": "What noun is formed by adding a prefix to the word 'air' to mean the middle layer of the Earth's atmosphere?",
+    "correct": ["midair", "mid-air"]
+  },
+  {
+    "baseWord": "night",
+    "question": "What noun is formed by adding a prefix to the word 'night' to mean the middle of the night?",
+    "correct": ["midnight"]
+  },
+  {
+    "baseWord": "range",
+    "question": "What noun is formed by adding a prefix to the word 'range' to mean the middle range of something?",
+    "correct": ["midrange", "mid-range"]
+  },
+  {
+    "baseWord": "life",
+    "question": "What noun is formed by adding a prefix to the word 'life' to mean the period in the middle of someone's life?",
+    "correct": ["midlife"]
+  },
+  {
+    "baseWord": "course",
+    "question": "What noun is formed by adding a prefix to the word 'course' to mean a part of the course happening in the middle?",
+    "correct": ["midcourse"]
+  },
+  {
+    "baseWord": "understand",
+    "question": "What verb is formed by adding a prefix to the word 'understand' to mean to fail to understand?",
+    "correct": ["misunderstand"]
+  },
+  {
+    "baseWord": "place",
+    "question": "What verb is formed by adding a prefix to the word 'place' to mean to put something in the wrong location?",
+    "correct": ["misplace"]
+  },
+  {
+    "baseWord": "lead",
+    "question": "What verb is formed by adding a prefix to the word 'lead' to mean to guide someone wrongly?",
+    "correct": ["mislead"]
+  },
+  {
+    "baseWord": "behave",
+    "question": "What verb is formed by adding a prefix to the word 'behave' to mean to act incorrectly?",
+    "correct": ["misbehave"]
+  },
+  {
+    "baseWord": "manage",
+    "question": "What verb is formed by adding a prefix to the word 'manage' to mean to handle something incorrectly?",
+    "correct": ["mismanage"]
+  },
+  {
+    "baseWord": "judge",
+    "question": "What verb is formed by adding a prefix to the word 'judge' to mean to form an incorrect opinion?",
+    "correct": ["misjudge"]
+  },
+  {
+    "baseWord": "fortune",
+    "question": "What noun is formed by adding a prefix to the word 'fortune' to mean bad luck or misfortune?",
+    "correct": ["misfortune"]
+  },
+  {
+    "baseWord": "inform",
+    "question": "What verb is formed by adding a prefix to the word 'inform' to mean to provide wrong or false information?",
+    "correct": ["misinform"]
+  },
+  {
+    "baseWord": "conduct",
+    "question": "What verb is formed by adding a prefix to the word 'conduct' to mean to lead an activity in the wrong way?",
+    "correct": ["misconduct"]
+  },
+  {
+    "baseWord": "carry",
+    "question": "What verb is formed by adding a prefix to the word 'carry' to mean to carry something incorrectly?",
+    "correct": ["miscarry"]
+  },
+  {
+    "baseWord": "interpret",
+    "question": "What verb is formed by adding a prefix to the word 'interpret' to mean to understand something wrongly?",
+    "correct": ["misinterpret"]
+  },
+  {
+    "baseWord": "quote",
+    "question": "What verb is formed by adding a prefix to the word 'quote' to mean to cite incorrectly?",
+    "correct": ["misquote"]
+  },
+  {
+    "baseWord": "calculate",
+    "question": "What verb is formed by adding a prefix to the word 'calculate' to mean to calculate incorrectly?",
+    "correct": ["miscalculate"]
+  },
+  {
+    "baseWord": "fit",
+    "question": "What verb is formed by adding a prefix to the word 'fit' to mean to fail to fit properly?",
+    "correct": ["misfit"]
+  },
+  {
+    "baseWord": "place",
+    "question": "What verb is formed by adding a prefix to the word 'place' to mean to put something in the wrong place?",
+    "correct": ["misplace"]
+  },
+  {
+    "baseWord": "align",
+    "question": "What verb is formed by adding a prefix to the word 'align' to mean to position incorrectly?",
+    "correct": ["misalign"]
+  },
+  {
+    "baseWord": "communicate",
+    "question": "What verb is formed by adding a prefix to the word 'communicate' to mean to communicate incorrectly?",
+    "correct": ["miscommunicate"]
+  },
+  {
+    "baseWord": "report",
+    "question": "What verb is formed by adding a prefix to the word 'report' to mean to provide false or inaccurate information?",
+    "correct": ["misreport"]
+  },
+  {
+    "baseWord": "direct",
+    "question": "What verb is formed by adding a prefix to the word 'direct' to mean to guide incorrectly?",
+    "correct": ["misdirect"]
+  },
+  {
+    "baseWord": "perform",
+    "question": "What verb is formed by adding a prefix to the word 'perform' to mean to do something better than expected?",
+    "correct": ["outperform"]
+  },
+  {
+    "baseWord": "shine",
+    "question": "What verb is formed by adding a prefix to the word 'shine' to mean to shine brighter than others?",
+    "correct": ["outshine"]
+  },
+  {
+    "baseWord": "smart",
+    "question": "What adjective is formed by adding a prefix to the word 'smart' to mean to be smarter than others?",
+    "correct": ["outsmart"]
+  },
+  {
+    "baseWord": "last",
+    "question": "What verb is formed by adding a prefix to the word 'last' to mean to last longer than others?",
+    "correct": ["outlast"]
+  },
+  {
+    "baseWord": "class",
+    "question": "What noun is formed by adding a prefix to the word 'class' to mean a group of people or things superior to others?",
+    "correct": ["outclass"]
+  },
+  {
+    "baseWord": "date",
+    "question": "What verb is formed by adding a prefix to the word 'date' to mean to surpass someone or something in popularity or achievement?",
+    "correct": ["outdate"]
+  },
+  {
+    "baseWord": "do",
+    "question": "What verb is formed by adding a prefix to the word 'do' to mean to do better than others?",
+    "correct": ["outdo"]
+  },
+  {
+    "baseWord": "number",
+    "question": "What noun is formed by adding a prefix to the word 'number' to mean to exceed in number?",
+    "correct": ["outnumber"]
+  },
+  {
+    "baseWord": "pace",
+    "question": "What verb is formed by adding a prefix to the word 'pace' to mean to move faster than someone or something?",
+    "correct": ["outpace"]
+  },
+  {
+    "baseWord": "wear",
+    "question": "What verb is formed by adding a prefix to the word 'wear' to mean to wear out or exhaust something over time?",
+    "correct": ["outwear"]
+  },
+  {
+    "baseWord": "pace",
+    "question": "What verb is formed by adding a prefix to the word 'pace' to mean to surpass someone in speed?",
+    "correct": ["outpace"]
+  },
+  {
+    "baseWord": "vote",
+    "question": "What verb is formed by adding a prefix to the word 'vote' to mean to vote in a way that surpasses others?",
+    "correct": ["outvote"]
+  },
+  {
+    "baseWord": "grow",
+    "question": "What verb is formed by adding a prefix to the word 'grow' to mean to grow bigger or better than others?",
+    "correct": ["outgrow"]
+  },
+  {
+    "baseWord": "perform",
+    "question": "What verb is formed by adding a prefix to the word 'perform' to mean to perform better than others?",
+    "correct": ["outperform"]
+  },
+  {
+    "baseWord": "reach",
+    "question": "What verb is formed by adding a prefix to the word 'reach' to mean to surpass in achievement?",
+    "correct": ["outreach"]
+  },
+  {
+    "baseWord": "match",
+    "question": "What verb is formed by adding a prefix to the word 'match' to mean to surpass or exceed in quality or ability?",
+    "correct": ["outmatch"]
+  },
+  {
+    "baseWord": "do",
+    "question": "What verb is formed by adding a prefix to the word 'do' to mean to surpass in ability or achievement?",
+    "correct": ["outdo"]
+  },
+  {
+    "baseWord": "talk",
+    "question": "What verb is formed by adding a prefix to the word 'talk' to mean to talk more than someone else?",
+    "correct": ["outtalk"]
+  },
+  {
+    "baseWord": "outage",
+    "question": "What noun is formed by adding a prefix to the word 'age' to refer to a period of time when a service or system is not functioning?",
+    "correct": ["outage"]
+  },
+  {
+    "baseWord": "gress",
+    "question": "What verb is formed by adding a prefix to the word 'gress' to mean to move forward?",
+    "correct": ["progress"]
+  },
+  {
+    "baseWord": "duce",
+    "question": "What verb is formed by adding a prefix to the word 'duce' to mean to lead or guide forward?",
+    "correct": ["produce"]
+  },
+  {
+    "baseWord": "mote",
+    "question": "What verb is formed by adding a prefix to the word 'mote' to mean to promote or advance?",
+    "correct": ["promote"]
+  },
+  {
+    "baseWord": "claim",
+    "question": "What verb is formed by adding a prefix to the word 'claim' to mean to speak in favor of?",
+    "correct": ["proclaim"]
+  },
+  {
+    "baseWord": "ceed",
+    "question": "What verb is formed by adding a prefix to the word 'ceed' to mean to go forward?",
+    "correct": ["proceed"]
+  },
+  {
+    "baseWord": "duce",
+    "question": "What verb is formed by adding a prefix to the word 'duce' to mean to lead or direct?",
+    "correct": ["produce"]
+  },
+  {
+    "baseWord": "pose",
+    "question": "What verb is formed by adding a prefix to the word 'pose' to mean to position something ahead of time?",
+    "correct": ["propose"]
+  },
+  {
+    "baseWord": "ject",
+    "question": "What verb is formed by adding a prefix to the word 'ject' to mean to throw forward?",
+    "correct": ["project"]
+  },
+  {
+    "baseWord": "duce",
+    "question": "What verb is formed by adding a prefix to the word 'duce' to mean to lead forward?",
+    "correct": ["produce"]
+  },
+  {
+    "baseWord": "tect",
+    "question": "What verb is formed by adding a prefix to the word 'tect' to mean to guard or shield?",
+    "correct": ["protect"]
+  },
+  {
+    "baseWord": "motion",
+    "question": "What noun is formed by adding a prefix to the word 'motion' to mean movement forward?",
+    "correct": ["promotion"]
+  },
+  {
+    "baseWord": "active",
+    "question": "What adjective is formed by adding a prefix to the word 'active' to mean in favor of or supportive?",
+    "correct": ["proactive"]
+  },
+  {
+    "baseWord": "sperous",
+    "question": "What adjective is formed by adding a prefix to the word 'sperous' to mean full of support or favor?",
+    "correct": ["prosperous"]
+  },
+  {
+    "baseWord": "test",
+    "question": "What verb is formed by adding a prefix to the word 'test' to mean to examine or evaluate forward?",
+    "correct": ["protest"]
+  },
+  {
+    "baseWord": "vision",
+    "question": "What noun is formed by adding a prefix to the word 'vision' to mean an idea or perception ahead of time?",
+    "correct": ["provision"]
+  },
+  {
+    "baseWord": "fit",
+    "question": "What verb is formed by adding a prefix to the word 'fit' to mean to be in favor or support?",
+    "correct": ["profit"]
+  },
+  {
+    "baseWord": "claim",
+    "question": "What verb is formed by adding a prefix to the word 'claim' to mean to declare or speak out for?",
+    "correct": ["proclaim"]
+  },
+  {
+    "baseWord": "cess",
+    "question": "What verb is formed by adding a prefix to the word 'cess' to mean to go or continue forward?",
+    "correct": ["process"]
+  },
+  {
+    "baseWord": "act",
+    "question": "What verb is formed by adding a prefix to the word 'act' to mean to do something again?",
+    "correct": ["react"]
+  },
+  {
+    "baseWord": "charge",
+    "question": "What verb is formed by adding a prefix to the word 'charge' to mean to charge again?",
+    "correct": ["recharge"]
+  },
+  {
+    "baseWord": "appear",
+    "question": "What verb is formed by adding a prefix to the word 'appear' to mean to appear again?",
+    "correct": ["reappear"]
+  },
+  {
+    "baseWord": "do",
+    "question": "What verb is formed by adding a prefix to the word 'do' to mean to do again?",
+    "correct": ["redo"]
+  },
+  {
+    "baseWord": "build",
+    "question": "What verb is formed by adding a prefix to the word 'build' to mean to build again?",
+    "correct": ["rebuild"]
+  },
+  {
+    "baseWord": "write",
+    "question": "What verb is formed by adding a prefix to the word 'write' to mean to write again?",
+    "correct": ["rewrite"]
+  },
+  {
+    "baseWord": "start",
+    "question": "What verb is formed by adding a prefix to the word 'start' to mean to start again?",
+    "correct": ["restart"]
+  },
+  {
+    "baseWord": "think",
+    "question": "What verb is formed by adding a prefix to the word 'think' to mean to think again?",
+    "correct": ["rethink"]
+  },
+  {
+    "baseWord": "store",
+    "question": "What verb is formed by adding a prefix to the word 'store' to mean to store again?",
+    "correct": ["restore"]
+  },
+  {
+    "baseWord": "use",
+    "question": "What verb is formed by adding a prefix to the word 'use' to mean to use again?",
+    "correct": ["reuse"]
+  },
+  {
+    "baseWord": "connect",
+    "question": "What verb is formed by adding a prefix to the word 'connect' to mean to connect again?",
+    "correct": ["reconnect"]
+  },
+  {
+    "baseWord": "organize",
+    "question": "What verb is formed by adding a prefix to the word 'organize' to mean to organize again?",
+    "correct": ["reorganize"]
+  },
+  {
+    "baseWord": "evaluate",
+    "question": "What verb is formed by adding a prefix to the word 'evaluate' to mean to evaluate again?",
+    "correct": ["reevaluate"]
+  },
+  {
+    "baseWord": "charge",
+    "question": "What verb is formed by adding a prefix to the word 'charge' to mean to fill again?",
+    "correct": ["recharge"]
+  },
+  {
+    "baseWord": "consider",
+    "question": "What verb is formed by adding a prefix to the word 'consider' to mean to think again?",
+    "correct": ["reconsider"]
+  },
+  {
+    "baseWord": "discover",
+    "question": "What verb is formed by adding a prefix to the word 'discover' to mean to find again?",
+    "correct": ["rediscover"]
+  },
+  {
+    "baseWord": "evaluate",
+    "question": "What verb is formed by adding a prefix to the word 'evaluate' to mean to assess again?",
+    "correct": ["reevaluate"]
+  },
+  {
+    "baseWord": "place",
+    "question": "What verb is formed by adding a prefix to the word 'place' to mean to place again?",
+    "correct": ["replace"]
+  },
+  {
+    "baseWord": "do",
+    "question": "What verb is formed by adding a prefix to the word 'do' to mean to do again?",
+    "correct": ["redo"]
+  },
+  {
+    "baseWord": "listen",
+    "question": "What verb is formed by adding a prefix to the word 'listen' to mean to listen again?",
+    "correct": ["relisten"]
+  },
+  {
+    "baseWord": "view",
+    "question": "What verb is formed by adding a prefix to the word 'view' to mean to view again?",
+    "correct": ["review"]
+  },
+  {
+    "baseWord": "test",
+    "question": "What verb is formed by adding a prefix to the word 'test' to mean to test again?",
+    "correct": ["retest"]
+  }
+];
+
+let currentWordIndex = 0;
+let score = 0;
+let correctAnswers = 0;
+
+async function showCelebration() {
+  const modal = document.getElementById('celebrationModal');
+  const pokemonId = Math.floor(Math.random() * 898) + 1;
+  const pokemonContainer = document.getElementById('pokemonImage');
+  
+  try {
+    const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${pokemonId}`);
+    const data = await response.json();
+    const pokemonImage = document.createElement('img');
+    pokemonImage.src = data.sprites.other['official-artwork'].front_default;
+    pokemonImage.alt = `Pokemon ${data.name}`;
+    pokemonImage.width = 200;
+    pokemonImage.height = 200;
+    
+    pokemonContainer.innerHTML = '';
+    pokemonContainer.appendChild(pokemonImage);
+    modal.style.display = 'flex';
+  } catch (error) {
+    console.error('Error fetching Pokemon:', error);
+  }
+}
+
+function closeCelebration() {
+  const modal = document.getElementById('celebrationModal');
+  modal.style.display = 'none';
+}
+
+function displayWord() {
+  const wordDisplay = document.getElementById('word');
+  const questionDisplay = document.getElementById('question');
+  const answerInput = document.getElementById('answer');
+  
+  // Generate a random index instead of using currentWordIndex
+  currentWordIndex = Math.floor(Math.random() * wordFamilies.length);
+  const currentWord = wordFamilies[currentWordIndex];
+  
+  wordDisplay.textContent = currentWord.baseWord;
+  questionDisplay.textContent = currentWord.question;
+  answerInput.value = '';
+}
+
+function skipWord() {
+  const feedback = document.getElementById('feedback');
+  const currentWord = wordFamilies[currentWordIndex];
+  
+  feedback.textContent = `Skipped. The correct answer was '${currentWord.correct[0]}'`;
+  feedback.className = "feedback incorrect";
+  
+  setTimeout(() => {
+    // Generate a new random index instead of incrementing
+    currentWordIndex = Math.floor(Math.random() * wordFamilies.length);
+    feedback.textContent = "";
+    displayWord();
+  }, 2000);
+}
+
+function checkAnswer() {
+  const currentWord = wordFamilies[currentWordIndex];
+  const feedback = document.getElementById('feedback');
+  const scoreDisplay = document.getElementById('score');
+  const answerInput = document.getElementById('answer');
+  
+  const userAnswer = answerInput.value.trim().toLowerCase();
+  
+  if (currentWord.correct.includes(userAnswer)) {
+    score += 10;
+    correctAnswers++;
+    feedback.textContent = "Correct! Well done!";
+    feedback.className = "feedback correct";
+    
+    if (correctAnswers === 10) {
+      showCelebration();
+      correctAnswers = 0;
+    }
+  } else {
+    feedback.textContent = `Incorrect. The correct answer is '${currentWord.correct.join("' or '")}'`;
+    feedback.className = "feedback incorrect";
+  }
+  
+  scoreDisplay.textContent = score;
+  
+  setTimeout(() => {
+    // Generate a new random index instead of incrementing
+    currentWordIndex = Math.floor(Math.random() * wordFamilies.length);
+    feedback.textContent = "";
+    displayWord();
+  }, 2000);
+}
+
+function startNewChallenge() {
+  score = 0;
+  correctAnswers = 0;
+  const scoreDisplay = document.getElementById('score');
+  const feedback = document.getElementById('feedback');
+  
+  scoreDisplay.textContent = score;
+  feedback.textContent = "Starting a new challenge!";
+  feedback.className = "feedback";
+  
+  setTimeout(() => {
+    feedback.textContent = "";
+    displayWord();
+  }, 1500);
+}
+
+document.getElementById('answer').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') {
+    checkAnswer();
+  }
+});
+
+displayWord();
+</script>
+   <div class="footer">Author: Aaron Shi. Released in 2025.</div>
+</body></html>
